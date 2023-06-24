@@ -1,0 +1,185 @@
+#!/bin/bash
+#
+UE5editorLocation="$(find /opt/UnrealEngine/Engine/Binaries/Linux -type f -iname 'UnrealEditor')"
+if [[ -x $UE5editorLocation ]]; then
+  export UNREAL_BIN=$UE5editorLocation
+else 
+  echo 'Unreal not executable or missing'
+  exit 1
+fi
+
+if [[ -x /usr/bin/prime-run ]]; then
+  export PRIME_RUN=/usr/bin/prime-run
+else 
+  export PRIME_RUN=''
+fi
+
+SET_GAME=''
+SET_SERVER=''
+SET_LOG=''
+SET_LEVEL=''
+SET_HOST=''
+debug=false
+SET_SERVER_TYPE=0
+SET_GAME_TYPE=0
+HAS_SET_LEVEL=0
+
+horizontal_rule () {
+  printf '%*s\n' "${COLUMNS:-$(tput cols)}" '' | tr ' ' -
+}
+
+print_help () {
+# no indentation for print_help on this multiline echo
+horizontal_rule
+echo "UnrealEditor CLI wrapper
+Examples:
+$0 -h
+^ print this help screen
+
+UnrealEngine -p ./PuzzlePlatforms.uproject
+^ open project with the unreal editor
+
+UnrealEngine -p ./PuzzlePlatforms.uproject --game --host '127.0.0.1' --log --debug
+^ connect to localhost server
+
+UnrealEngine -p ./PuzzlePlatforms.uproject --server --log --level '/Game/ThirdPerson/Maps/ThirdPersonMap'
+^ be a server"
+horizontal_rule
+}
+
+parse_opts () {
+  ORIGINAL_OPTS=$@
+  # Execute getopt on the arguments passed to this program, identified by the special character $@
+  short_opts="hg:slp:"
+  long_opts="help,host:,level:,debug,game,server,log,project:"
+  PARSED_OPTIONS=$(getopt --alternative -n "$0" -o "$short_opts" --long "$long_opts" -- "$@")
+
+  #Bad arguments, something has gone wrong with the getopt command.
+  if [[ $? -ne 0 ]];
+  then
+    horizontal_rule
+    echo  'bad argruments'
+    exit 1
+  fi
+
+  # A little magic, necessary when using getopt.
+  eval set -- "$PARSED_OPTIONS"
+
+  opt_loop_count=1
+  while true; do
+    #sleep 1
+    ((++opt_loop_count))
+    if [[ $debug == true ]]; then
+      echo $opt_loop_count
+      echo $1
+      echo $@
+    fi
+    case "$1" in
+      -h|--help)
+        print_help=true
+        print_help
+        exit 2
+        shift;;
+      --debug)
+        debug=true
+        set -x
+        shift;;
+      -g|--game)
+        export SET_GAME_TYPE=1
+        export SET_GAME="-game"
+        shift;;
+      --host)
+        export SET_HOST="$2"
+        shift 2 ;;
+      --level)
+        HAS_SET_LEVEL=1
+        export SET_LEVEL="$2"
+        shift 2 ;;
+      -s|--server)
+        export SET_SERVER_TYPE=1
+        export SET_SERVER='-server'
+        shift;;
+      -l|--log)
+        export SET_LOG='-log'
+        shift;;
+      -p|--project)
+        export TARGET=$(realpath $2)
+        shift 2 ;;
+      --)
+        shift
+        break;;
+    esac
+  done
+  if [[ $SET_SERVER_TYPE == 1 && $HAS_SET_LEVEL == 0 ]]; then
+    echo 'server type requires level'
+    exit 1
+  elif [[ $SET_SERVER_TYPE == 1 && $SET_GAME_TYPE == 1 ]]; then
+    echo 'server and game type cannot be mixed'
+    exit 1
+  fi
+}
+
+official_tests () {
+
+# no indentation as these are copied directly from unreal-engine-5.sh
+if [ "$(id -u)" -eq 0 ]; then
+    echo "ERROR: Run this as an unprivileged user; not as root."
+    return;
+fi
+
+if [ ! -d "${HOME}/.config/Epic/UnrealEngine/5.0/Intermediate/" ]; then
+    mkdir -p "${HOME}/.config/Epic/UnrealEngine/5.0/Intermediate/"
+fi
+
+if [ ! -d "${HOME}/.cnfig/Epic/UnrealEngine/5.0/Intermediate/" ]; then
+    mkdir -p "${HOME}/.cnfig/Epic/UnrealEngine/5.0/Intermediate/"
+fi
+
+cp /usr/share/applications/com.unrealengine.UE5Editor.desktop "${HOME}/.local/share/applications/com.unrealengine.UE5Editor.desktop"
+UE5desktopFileChecksum="$(sha256sum "${HOME}/.local/share/applications/com.unrealengine.UE5Editor.desktop" | cut -f 1 -d ' ')"
+#echo $UE5desktopFileChecksum
+
+if [ "${UE5desktopFileChecksum}" == "82f71215e4731ea6b4b8359062dcd9ca8c1e49d12dc4c46824f5402a888291b0" ]; then
+    #UE5editorLocation="$(find /opt/unreal-engine/Engine/Binaries -type f -iname 'UnrealEditor')"
+    #UE5editorLocation="$(find /opt/UnrealEngine/Engine/Binaries -type f -iname 'UnrealEditor')"
+    UE5editorPath="$(echo ${UE5editorLocation/UnrealEditor/})"
+    
+    sed -i "7c\Exec=${UE5editorLocation} %F" "${HOME}/.local/share/applications/com.unrealengine.UE5Editor.desktop"
+    sed -i "14c\Path=${UE5editorPath}" "${HOME}/.local/share/applications/com.unrealengine.UE5Editor.desktop"
+else
+  echo checksum bad
+  exit 1
+fi
+
+# commenting out this one line as we are going to start directly from the engine binaries
+# gio launch "${HOME}/.local/share/applications/com.unrealengine.UE5Editor.desktop"
+
+}
+
+
+main () {
+  official_tests
+  set -eu
+  if [[ "$#" -gt 0 ]]; then
+    parse_opts $@
+      # $PRIME_RUN $UNREAL_BIN "$TARGET" "$SET_LEVEL" $SET_SERVER $SET_HOST $SET_GAME $SET_LOG
+    if [[ $SET_SERVER_TYPE == 1 && $SET_GAME_TYPE == 0 ]]; then
+      # Server type
+      $PRIME_RUN $UNREAL_BIN "$TARGET" "$SET_LEVEL" $SET_SERVER $SET_LOG
+    elif [[ $SET_SERVER_TYPE == 0 && $SET_GAME_TYPE == 1 ]]; then
+      # Game type
+      $PRIME_RUN $UNREAL_BIN "$TARGET" $SET_HOST $SET_GAME $SET_LOG
+    elif [[ $SET_SERVER_TYPE == 0 && $SET_GAME_TYPE == 0 ]]; then
+      # Open with Editor 
+      $PRIME_RUN $UNREAL_BIN "$TARGET" $SET_LOG
+    else
+      echo 'Warning! unknown behavior! here is the command line if you want to try it on your own'
+      echo $PRIME_RUN $UNREAL_BIN "$TARGET" "$SET_LEVEL" $SET_SERVER $SET_HOST $SET_GAME $SET_LOG
+      exit 1
+    fi
+  else
+    $PRIME_RUN gio launch "${HOME}/.local/share/applications/com.unrealengine.UE5Editor.desktop"
+  fi
+}
+
+main $@
