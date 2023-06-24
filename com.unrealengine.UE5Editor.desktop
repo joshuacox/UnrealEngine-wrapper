@@ -1,0 +1,22 @@
+#!/usr/bin/env xdg-open
+
+[Desktop Entry]
+Categories=Development;
+Comment[en_US]=Create next-generation video games
+Comment=Create next-generation video games
+Exec=/opt/UnrealEngine/Engine/Binaries/Linux/UnrealEditor %U
+GenericName[en_US]=
+GenericName=
+Icon=ue5editor
+MimeType=
+Name[en_US]=Unreal Engine 5 Editor
+Name=Unreal Engine 5 Editor
+Path=/usr/bin/
+StartupNotify=true
+Terminal=false
+TerminalOptions=
+Type=Application
+X-DBUS-ServiceName=
+X-DBUS-StartupType=
+X-KDE-SubstituteUID=false
+X-KDE-Username=

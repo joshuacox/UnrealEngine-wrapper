@@ -119,8 +119,7 @@ parse_opts () {
   fi
 }
 
-official_tests () {
-
+startup_tests () {
 # no indentation as these are copied directly from unreal-engine-5.sh
 if [ "$(id -u)" -eq 0 ]; then
     echo "ERROR: Run this as an unprivileged user; not as root."
@@ -134,31 +133,11 @@ fi
 if [ ! -d "${HOME}/.cnfig/Epic/UnrealEngine/5.0/Intermediate/" ]; then
     mkdir -p "${HOME}/.cnfig/Epic/UnrealEngine/5.0/Intermediate/"
 fi
-
-cp /usr/share/applications/com.unrealengine.UE5Editor.desktop "${HOME}/.local/share/applications/com.unrealengine.UE5Editor.desktop"
-UE5desktopFileChecksum="$(sha256sum "${HOME}/.local/share/applications/com.unrealengine.UE5Editor.desktop" | cut -f 1 -d ' ')"
-#echo $UE5desktopFileChecksum
-
-if [ "${UE5desktopFileChecksum}" == "82f71215e4731ea6b4b8359062dcd9ca8c1e49d12dc4c46824f5402a888291b0" ]; then
-    #UE5editorLocation="$(find /opt/unreal-engine/Engine/Binaries -type f -iname 'UnrealEditor')"
-    #UE5editorLocation="$(find /opt/UnrealEngine/Engine/Binaries -type f -iname 'UnrealEditor')"
-    UE5editorPath="$(echo ${UE5editorLocation/UnrealEditor/})"
-    
-    sed -i "7c\Exec=${UE5editorLocation} %F" "${HOME}/.local/share/applications/com.unrealengine.UE5Editor.desktop"
-    sed -i "14c\Path=${UE5editorPath}" "${HOME}/.local/share/applications/com.unrealengine.UE5Editor.desktop"
-else
-  echo checksum bad
-  exit 1
-fi
-
-# commenting out this one line as we are going to start directly from the engine binaries
-# gio launch "${HOME}/.local/share/applications/com.unrealengine.UE5Editor.desktop"
-
 }
 
 
 main () {
-  official_tests
+  startup_tests
   set -eu
   if [[ "$#" -gt 0 ]]; then
     parse_opts $@
