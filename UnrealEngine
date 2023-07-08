@@ -1,18 +1,9 @@
 #!/bin/bash
-#
-UE5editorLocation="$(find /opt/UnrealEngine/Engine/Binaries/Linux -type f -iname 'UnrealEditor')"
-if [[ -x $UE5editorLocation ]]; then
-  export UNREAL_BIN=$UE5editorLocation
-else 
-  echo 'Unreal not executable or missing'
-  exit 1
-fi
-
-if [[ -x /usr/bin/prime-run ]]; then
-  export PRIME_RUN=/usr/bin/prime-run
-else 
-  export PRIME_RUN=''
-fi
+: ${UNREAL_ENGINE_PATH:='/opt/UnrealEngine/Engine/'}
+: ${UNREAL_EDITOR:="$(find $UNREAL_ENGINE_PATH/Binaries/Linux -type f -name 'UnrealEditor')"}
+: ${UNREAL_BUILD_TOOL:="$(find $UNREAL_ENGINE_PATH/Binaries/DotNET/UnrealBuildTool -type f -name 'UnrealBuildTool')"}
+: ${UNREAL_BUILD_DIR:="dist"}
+: ${DOTNET_AUTOMATION_TOOL:="$(find $UNREAL_ENGINE_PATH/Binaries/DotNET/AutomationTool -type f -name 'AutomationTool')"}
 
 SET_GAME=''
 SET_SERVER=''
@@ -23,6 +14,9 @@ debug=false
 SET_SERVER_TYPE=0
 SET_GAME_TYPE=0
 HAS_SET_LEVEL=0
+SET_GEN_SOLUTION=0
+SET_BUILD=0
+SET_COOK=0
 
 horizontal_rule () {
   printf '%*s\n' "${COLUMNS:-$(tput cols)}" '' | tr ' ' -
@@ -43,15 +37,18 @@ UnrealEngine -p ./PuzzlePlatforms.uproject --game --host '127.0.0.1' --log --deb
 ^ connect to localhost server
 
 UnrealEngine -p ./PuzzlePlatforms.uproject --server --log --level '/Game/ThirdPerson/Maps/ThirdPersonMap'
-^ be a server"
+^ be a server
+
+UNREAL_ENGINE_PATH=/home/bob/UE5/Engine UnrealEngine -p ./PuzzlePlatforms.uproject
+^ specify the path to unreal engine"
 horizontal_rule
 }
 
 parse_opts () {
   ORIGINAL_OPTS=$@
   # Execute getopt on the arguments passed to this program, identified by the special character $@
-  short_opts="hg:slp:"
-  long_opts="help,host:,level:,debug,game,server,log,project:"
+  short_opts="ohg:slp:"
+  long_opts="gen-solution,build,cook,open,help,host:,level:,debug,game,server,log,project:"
   PARSED_OPTIONS=$(getopt --alternative -n "$0" -o "$short_opts" --long "$long_opts" -- "$@")
 
   #Bad arguments, something has gone wrong with the getopt command.
@@ -84,6 +81,15 @@ parse_opts () {
         debug=true
         set -x
         shift;;
+      --build)
+        export SET_BUILD=1
+        shift;;
+      --cook)
+        export SET_COOK=1
+        shift;;
+      --gen-solution)
+        export SET_GEN_SOLUTION=1
+        shift;;
       -g|--game)
         export SET_GAME_TYPE=1
         export SET_GAME="-game"
@@ -101,6 +107,25 @@ parse_opts () {
         shift;;
       -l|--log)
         export SET_LOG='-log'
+        shift;;
+      -o|--open)
+        FOUND=$(find . -maxdepth 1 -type f -iname '*.uproject')
+        NUM_FOUND=$(echo $FOUND | tr ' ' '\n' | wc -l)
+        echo $FOUND | tr ' ' '\n'
+        if [[ $NUM_FOUND -gt 1 ]]; then
+          echo too many uprojects found
+          exit 1
+        fi
+        if [[ -z $FOUND ]]; then
+          echo uproject not found
+          exit 1
+        fi
+        if [[ -f $FOUND ]]; then
+          export TARGET=$(realpath $FOUND)
+        else
+          echo uproject in unknown format
+          exit 1
+        fi
         shift;;
       -p|--project)
         export TARGET=$(realpath $2)
@@ -133,6 +158,36 @@ fi
 if [ ! -d "${HOME}/.cnfig/Epic/UnrealEngine/5.0/Intermediate/" ]; then
     mkdir -p "${HOME}/.cnfig/Epic/UnrealEngine/5.0/Intermediate/"
 fi
+
+# end of no indetation
+
+  # Check the binaries
+  if [[ -x $UNREAL_EDITOR ]]; then
+    export UNREAL_EDITOR=$UNREAL_EDITOR
+  else 
+    echo "Unreal editor not executable or missing $UNREAL_EDITOR"
+    exit 1
+  fi
+  
+  if [[ -x $UNREAL_BUILD_TOOL ]]; then
+    export UNREAL_BUILD_TOOL=$UNREAL_BUILD_TOOL
+  else 
+    echo "Unreal build tool not executable or missing $UNREAL_BUILD_TOOL"
+    exit 1
+  fi
+
+  if [[ -x $DOTNET_AUTOMATION_TOOL ]]; then
+    export DOTNET_AUTOMATION_TOOL=$DOTNET_AUTOMATION_TOOL
+  else 
+    echo "DOTnet automation tool not executable or missing $DOTNET_AUTOMATION_TOOL"
+    exit 1
+  fi
+
+  if [[ -x /usr/bin/prime-run ]]; then
+    export PRIME_RUN=/usr/bin/prime-run
+  else 
+    export PRIME_RUN=''
+  fi
 }
 
 
@@ -141,19 +196,30 @@ main () {
   set -eu
   if [[ "$#" -gt 0 ]]; then
     parse_opts $@
-      # $PRIME_RUN $UNREAL_BIN "$TARGET" "$SET_LEVEL" $SET_SERVER $SET_HOST $SET_GAME $SET_LOG
-    if [[ $SET_SERVER_TYPE == 1 && $SET_GAME_TYPE == 0 ]]; then
+    if [[ $SET_GEN_SOLUTION == 1 ]]; then
+      # Thanks to Dagon1999 for these flags https://forums.unrealengine.com/t/generate-project-files-in-linux/1213557/2
+      #$enginedir/Binaries/DotNET/UnrealBuildTool/UnrealBuildTool -projectfiles -vscode -project="$projectfile" -game -engine
+      $PRIME_RUN $UNREAL_BUILD_TOOL -projectfiles -vscode -project="$TARGET" -game -engine
+    elif [[ $SET_COOK == 1 ]]; then
+      # Thanks to Dagon1999 for these flags https://forums.unrealengine.com/t/generate-project-files-in-linux/1213557/2
+      #$enginedir/Binaries/Linux/UnrealEditor-Cmd "$projectfilepath" -run=cook -targetplatform=Linux -iterate -map=$map
+      $PRIME_RUN $UNREAL_EDITOR "$TARGET" -run=cook -targetplatform=Linux -iterate -map="$SET_LEVEL" $SET_LOG
+    elif [[ $SET_BUILD == 1 ]]; then
+      # Thanks to Dagon1999 for these flags https://forums.unrealengine.com/t/generate-project-files-in-linux/1213557/2
+      #$enginedir/Binaries/DotNET/AutomationTool/AutomationTool -ScriptsForProject="$projectfilepath" BuildCookRun -project="$projectfilepath" -noP4 -clientconfig=Shipping -serverconfig=Shipping -nocompile -nocompileeditor -installed -ue4exe=$enginedir/Binaries/Linux/UnrealEditor-Cmd -utf8output -platform=Linux -build -skipcook -compressed -stage -deploy -stagingdirectory=$builddir
+      $PRIME_RUN $DOTNET_AUTOMATION_TOOL -ScriptsForProject="$TARGET" BuildCookRun -project="$TARGET" -noP4 -clientconfig=Shipping -serverconfig=Shipping -nocompile -nocompileeditor -installed -ue4exe=$UNREAL_EDITOR -utf8output -platform=Linux -build -skipcook -compressed -stage -deploy -stagingdirectory=$UNREAL_BUILD_DIR
+    elif [[ $SET_SERVER_TYPE == 1 && $SET_GAME_TYPE == 0 ]]; then
       # Server type
-      $PRIME_RUN $UNREAL_BIN "$TARGET" "$SET_LEVEL" $SET_SERVER $SET_LOG
+      $PRIME_RUN $UNREAL_EDITOR "$TARGET" "$SET_LEVEL" $SET_SERVER $SET_LOG
     elif [[ $SET_SERVER_TYPE == 0 && $SET_GAME_TYPE == 1 ]]; then
       # Game type
-      $PRIME_RUN $UNREAL_BIN "$TARGET" $SET_HOST $SET_GAME $SET_LOG
+      $PRIME_RUN $UNREAL_EDITOR "$TARGET" $SET_HOST $SET_GAME $SET_LOG
     elif [[ $SET_SERVER_TYPE == 0 && $SET_GAME_TYPE == 0 ]]; then
       # Open with Editor 
-      $PRIME_RUN $UNREAL_BIN "$TARGET" $SET_LOG
+      $PRIME_RUN $UNREAL_EDITOR "$TARGET" $SET_LOG
     else
       echo 'Warning! unknown behavior! here is the command line if you want to try it on your own'
-      echo $PRIME_RUN $UNREAL_BIN "$TARGET" "$SET_LEVEL" $SET_SERVER $SET_HOST $SET_GAME $SET_LOG
+      echo $PRIME_RUN $UNREAL_EDITOR "$TARGET" "$SET_LEVEL" $SET_SERVER $SET_HOST $SET_GAME $SET_LOG
       exit 1
     fi
   else
@@ -162,3 +228,4 @@ main () {
 }
 
 main $@
+exit 0
