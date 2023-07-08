@@ -207,7 +207,7 @@ main () {
     elif [[ $SET_BUILD == 1 ]]; then
       # Thanks to Dagon1999 for these flags https://forums.unrealengine.com/t/generate-project-files-in-linux/1213557/2
       #$enginedir/Binaries/DotNET/AutomationTool/AutomationTool -ScriptsForProject="$projectfilepath" BuildCookRun -project="$projectfilepath" -noP4 -clientconfig=Shipping -serverconfig=Shipping -nocompile -nocompileeditor -installed -ue4exe=$enginedir/Binaries/Linux/UnrealEditor-Cmd -utf8output -platform=Linux -build -skipcook -compressed -stage -deploy -stagingdirectory=$builddir
-      $PRIME_RUN $DOTNET_AUTOMATION_TOOL -ScriptsForProject="$TARGET" BuildCookRun -project="$TARGET" -noP4 -clientconfig=Shipping -serverconfig=Shipping -nocompile -nocompileeditor -installed -ue4exe=$UNREAL_EDITOR -utf8output -platform=Linux -build -skipcook -compressed -stage -deploy -stagingdirectory=$UNREAL_BUILD_DIR
+      $PRIME_RUN $DOTNET_AUTOMATION_TOOL -ScriptsForProject="$TARGET" BuildCookRun -project="$TARGET" -noP4 -clientconfig=Shipping -serverconfig=Shipping -nocompile -nocompileeditor -installed -unrealexe=$UNREAL_EDITOR -utf8output -platform=Linux -build -skipcook -compressed -stage -deploy -stagingdirectory=$UNREAL_BUILD_DIR
     elif [[ $SET_SERVER_TYPE == 1 && $SET_GAME_TYPE == 0 ]]; then
       # Server type
       $PRIME_RUN $UNREAL_EDITOR "$TARGET" "$SET_LEVEL" $SET_SERVER $SET_LOG
