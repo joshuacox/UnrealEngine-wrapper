@@ -180,6 +180,7 @@ fi
     export DOTNET_AUTOMATION_TOOL=$DOTNET_AUTOMATION_TOOL
   else 
     echo "DOTnet automation tool not executable or missing $DOTNET_AUTOMATION_TOOL"
+    echo "If this is a fresh install of Unreal you might need to open and build a project once from the editor for this tool to be automatically be built."
     exit 1
   fi
 
