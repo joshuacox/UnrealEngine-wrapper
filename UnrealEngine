@@ -1,5 +1,5 @@
 #!/bin/bash
-: ${UNREAL_ENGINE_PATH:='/opt/UnrealEngine/Engine/'}
+: ${UNREAL_ENGINE_PATH:='/opt/UnrealEngine/Engine'}
 : ${UNREAL_EDITOR:="$(find $UNREAL_ENGINE_PATH/Binaries/Linux -type f -name 'UnrealEditor')"}
 : ${UNREAL_BUILD_TOOL:="$(find $UNREAL_ENGINE_PATH/Binaries/DotNET/UnrealBuildTool -type f -name 'UnrealBuildTool')"}
 : ${UNREAL_BUILD_DIR:="dist"}
