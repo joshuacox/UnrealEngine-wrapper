@@ -9,6 +9,7 @@ SET_GAME=''
 SET_SERVER=''
 SET_LOG=''
 SET_LEVEL=''
+SET_MAKEFILE=''
 SET_HOST=''
 debug=false
 SET_SERVER_TYPE=0
@@ -47,8 +48,8 @@ horizontal_rule
 parse_opts () {
   ORIGINAL_OPTS=$@
   # Execute getopt on the arguments passed to this program, identified by the special character $@
-  short_opts="ohg:slp:"
-  long_opts="gen-solution,build,cook,open,help,host:,level:,debug,game,server,log,project:"
+  short_opts="mohg:slp:"
+  long_opts="make,gen-solution,build,cook,open,help,host:,level:,debug,game,server,log,project:"
   PARSED_OPTIONS=$(getopt --alternative -n "$0" -o "$short_opts" --long "$long_opts" -- "$@")
 
   #Bad arguments, something has gone wrong with the getopt command.
@@ -80,6 +81,9 @@ parse_opts () {
       --debug)
         debug=true
         set -x
+        shift;;
+      -m|--make)
+        export SET_MAKEFILE=1
         shift;;
       --build)
         export SET_BUILD=1
@@ -204,6 +208,10 @@ main () {
       # Thanks to Dagon1999 for these flags https://forums.unrealengine.com/t/generate-project-files-in-linux/1213557/2
       #$enginedir/Binaries/Linux/UnrealEditor-Cmd "$projectfilepath" -run=cook -targetplatform=Linux -iterate -map=$map
       $PRIME_RUN $UNREAL_EDITOR "$TARGET" -run=cook -targetplatform=Linux -iterate -map="$SET_LEVEL" $SET_LOG
+    elif [[ $SET_MAKEFILE == 1 ]]; then
+      # Thanks to Dagon1999 for these flags https://forums.unrealengine.com/t/generate-project-files-in-linux/1213557/2
+      #$enginedir/Binaries/Linux/UnrealEditor-Cmd "$projectfilepath" -run=cook -targetplatform=Linux -iterate -map=$map
+      $PRIME_RUN $UNREAL_BUILD_TOOL -projectfiles -project="$TARGET" -game -engine
     elif [[ $SET_BUILD == 1 ]]; then
       # Thanks to Dagon1999 for these flags https://forums.unrealengine.com/t/generate-project-files-in-linux/1213557/2
       #$enginedir/Binaries/DotNET/AutomationTool/AutomationTool -ScriptsForProject="$projectfilepath" BuildCookRun -project="$projectfilepath" -noP4 -clientconfig=Shipping -serverconfig=Shipping -nocompile -nocompileeditor -installed -ue4exe=$enginedir/Binaries/Linux/UnrealEditor-Cmd -utf8output -platform=Linux -build -skipcook -compressed -stage -deploy -stagingdirectory=$builddir
