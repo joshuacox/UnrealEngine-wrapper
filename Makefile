@@ -1,4 +1,6 @@
-all: clean install
+all:
+	make clean
+	make install
 
 install: ${HOME}/.local/share/applications/com.unrealengine.UE5Editor.desktop /usr/local/bin/UnrealEngine
 	ls -alh "${HOME}/.local/share/applications/com.unrealengine.UE5Editor.desktop"
