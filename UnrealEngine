@@ -1,5 +1,5 @@
 #!/bin/bash
-: ${UNREAL_ENGINE_PATH:='/opt/UnrealEngine/Engine/'}
+: ${UNREAL_ENGINE_PATH:='/opt/UnrealEngine/Engine'}
 : ${UNREAL_EDITOR:="$(find $UNREAL_ENGINE_PATH/Binaries/Linux -type f -name 'UnrealEditor')"}
 : ${UNREAL_BUILD_TOOL:="$(find $UNREAL_ENGINE_PATH/Binaries/DotNET/UnrealBuildTool -type f -name 'UnrealBuildTool')"}
 : ${UNREAL_BUILD_DIR:="dist"}
@@ -184,6 +184,8 @@ fi
     export DOTNET_AUTOMATION_TOOL=$DOTNET_AUTOMATION_TOOL
   else 
     echo "DOTnet automation tool not executable or missing $DOTNET_AUTOMATION_TOOL"
+    echo "If this is a fresh install of Unreal you might need to open and build a project once from the editor for this tool to be automatically be built."
+    echo 'Discussion here --> https://forums.unrealengine.com/t/automationtool-exe-no-such-file-or-directory-when-running-runuat-command-on-os-x/357282'
     exit 1
   fi
 
