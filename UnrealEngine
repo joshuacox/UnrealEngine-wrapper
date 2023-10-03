@@ -54,6 +54,23 @@ test_code_editor () {
     echo 'code editor not found'
     exit 1
   fi
+  FOUND=$(find . -maxdepth 1 -type f -iname '*.code-workspace')
+  NUM_FOUND=$(echo $FOUND | tr ' ' '\n' | wc -l)
+  echo $FOUND | tr ' ' '\n'
+  if [[ $NUM_FOUND -gt 1 ]]; then
+    echo too many code-worksapces found
+    exit 1
+  fi
+  if [[ -z $FOUND ]]; then
+    echo code-workspace not found
+    exit 1
+  fi
+  if [[ -f $FOUND ]]; then
+    export CODE_TARGET=$(realpath $FOUND)
+  else
+    echo code-workspace in unknown format
+    exit 1
+  fi
 }
 
 parse_opts () {
@@ -102,23 +119,6 @@ parse_opts () {
         shift;;
       --build)
         export SET_BUILD=1
-        FOUND=$(find . -maxdepth 1 -type f -iname '*.code-workspace')
-        NUM_FOUND=$(echo $FOUND | tr ' ' '\n' | wc -l)
-        echo $FOUND | tr ' ' '\n'
-        if [[ $NUM_FOUND -gt 1 ]]; then
-          echo too many code-worksapces found
-          exit 1
-        fi
-        if [[ -z $FOUND ]]; then
-          echo code-workspace not found
-          exit 1
-        fi
-        if [[ -f $FOUND ]]; then
-          export CODE_TARGET=$(realpath $FOUND)
-        else
-          echo code-workspace in unknown format
-          exit 1
-        fi
         shift;;
       --cook)
         export SET_COOK=1
