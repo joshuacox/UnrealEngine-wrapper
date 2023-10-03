@@ -45,11 +45,22 @@ UNREAL_ENGINE_PATH=/home/bob/UE5/Engine UnrealEngine -p ./PuzzlePlatforms.uproje
 horizontal_rule
 }
 
+test_code_editor () {
+  if [[ -x $(which vscodium) ]]; then
+    export UNREAL_CODE_EDITOR=$(which vscodium)
+  elif [[ -x $(which code) ]]; then
+    export UNREAL_CODE_EDITOR=$(which code)
+  else 
+    echo 'code editor not found'
+    exit 1
+  fi
+}
+
 parse_opts () {
   ORIGINAL_OPTS=$@
   # Execute getopt on the arguments passed to this program, identified by the special character $@
-  short_opts="mohg:slp:"
-  long_opts="make,gen-solution,build,cook,open,help,host:,level:,debug,game,server,log,project:"
+  short_opts="cmohg:slp:"
+  long_opts="code,make,gen-solution,build,cook,open,help,host:,level:,debug,game,server,log,project:"
   PARSED_OPTIONS=$(getopt --alternative -n "$0" -o "$short_opts" --long "$long_opts" -- "$@")
 
   #Bad arguments, something has gone wrong with the getopt command.
@@ -82,11 +93,32 @@ parse_opts () {
         debug=true
         set -x
         shift;;
+      -c|--code)
+        test_code_editor
+        export SET_CODE=1
+        shift;;
       -m|--make)
         export SET_MAKEFILE=1
         shift;;
       --build)
         export SET_BUILD=1
+        FOUND=$(find . -maxdepth 1 -type f -iname '*.code-workspace')
+        NUM_FOUND=$(echo $FOUND | tr ' ' '\n' | wc -l)
+        echo $FOUND | tr ' ' '\n'
+        if [[ $NUM_FOUND -gt 1 ]]; then
+          echo too many code-worksapces found
+          exit 1
+        fi
+        if [[ -z $FOUND ]]; then
+          echo code-workspace not found
+          exit 1
+        fi
+        if [[ -f $FOUND ]]; then
+          export CODE_TARGET=$(realpath $FOUND)
+        else
+          echo code-workspace in unknown format
+          exit 1
+        fi
         shift;;
       --cook)
         export SET_COOK=1
@@ -206,6 +238,8 @@ main () {
       # Thanks to Dagon1999 for these flags https://forums.unrealengine.com/t/generate-project-files-in-linux/1213557/2
       #$enginedir/Binaries/DotNET/UnrealBuildTool/UnrealBuildTool -projectfiles -vscode -project="$projectfile" -game -engine
       $PRIME_RUN $UNREAL_BUILD_TOOL -projectfiles -vscode -project="$TARGET" -game -engine
+    elif [[ $SET_CODE == 1 ]]; then
+      $PRIME_RUN $UNREAL_CODE_EDITOR "${CODE_TARGET}" $SET_LOG
     elif [[ $SET_COOK == 1 ]]; then
       # Thanks to Dagon1999 for these flags https://forums.unrealengine.com/t/generate-project-files-in-linux/1213557/2
       #$enginedir/Binaries/Linux/UnrealEditor-Cmd "$projectfilepath" -run=cook -targetplatform=Linux -iterate -map=$map
