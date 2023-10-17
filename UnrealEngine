@@ -18,6 +18,7 @@ HAS_SET_LEVEL=0
 SET_GEN_SOLUTION=0
 SET_BUILD=0
 SET_COOK=0
+SET_CODE=0
 
 horizontal_rule () {
   printf '%*s\n' "${COLUMNS:-$(tput cols)}" '' | tr ' ' -
